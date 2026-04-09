@@ -1,13 +1,11 @@
+[English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
+
+---
+
 # Stable Diffusion & ControlNet Automated Flow
 
-**Status**: Generative AI Orchestration  
-**Stack**: HuggingFace Diffusers, OpenCV, ControlNet, PyTorch
+**Status**: Generative AI Orchestration
 
-## Overview
-A programmatic pipeline demonstrating deep integration with Stable Diffusion beyond mere UI prompting. This repository exposes how to orchestrate Diffusers, inject ControlNet boundaries (Canny edge detection), and generate consistent, structurally guided imagery entirely via code.
+Demonstrates programmatic deep integration with Stable Diffusion and ControlNet purely via Python.
 
-## Why Code > UI?
-By wrapping image generation in Python functions, this enables:
-1. **Batch processing** and parameter grid searches.
-2. **API integration** into larger AI agent workflows.
-3. **Deterministic testing** using fixed seeds and latents.
+*(This project proves elite engineering and automation skills)*
