@@ -2,10 +2,7 @@
 
 ---
 
-# Stable Diffusion & ControlNet 自動化フロー
+# AIGC Prompt + ControlNet Workflow
 
-**ステータス**: 生成 AI オーケストレーション
-
-純粋に Python 経由での Stable Diffusion と ControlNet とのプログラムによる深い統合を示します。
-
-*(This project proves elite engineering and automation skills)*
+プロンプト設計と ControlNet 推論を同一リポジトリで管理する実装サンプルです。
+詳細は [README_zh.md](README_zh.md) を参照してください。
