@@ -1,0 +1,7 @@
+torch==2.5.1
+transformers==4.46.3
+diffusers==0.31.0
+accelerate==1.1.1
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+Pillow>=10,<13
