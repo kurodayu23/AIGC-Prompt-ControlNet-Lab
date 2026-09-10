@@ -1,8 +1,8 @@
 {
   "version": "1.2.0",
   "metadata": {
-    "engine": "Midjourney V6 / Stable Diffusion XL",
-    "description": "Production-grade deterministic prompt matrix for AIGC workflows."
+    "engine": "Midjourney V6 / Stable Diffusion 1.5",
+    "description": "提示词模板与参数预设；模型效果需独立验证。"
   },
   "sd_defaults": {
     "negative_prompt": "(worst quality, low quality:1.4), (deformed, distorted, disfigured:1.3), poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, (mutated hands and fingers:1.4), disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation"
@@ -16,5 +16,6 @@
     "v6_photoreal": "--v 6.0 --style raw --ar 16:9 --q 2 --s 250",
     "v6_anime": "--niji 6 --ar 9:16 --s 400",
     "v6_concept": "--v 6.0 --ar 3:2 --c 10 --s 750"
-  }
+  },
+  "midjourney_negative_prompt": "blurry, distorted, watermark"
 }

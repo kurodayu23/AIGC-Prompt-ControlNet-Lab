@@ -17,21 +17,16 @@ class GeneratedPrompt:
         
     def as_midjourney_string(self) -> str:
         """Format for Discord/Midjourney Bot invocation."""
-        return f"/imagine prompt: {self.positive} --no {self.negative.replace(',', '')} {self.midjourney_suffix}".strip()
+        negative = f" --no {self.negative}" if self.negative else ""
+        return f"/imagine prompt: {self.positive}{negative} {self.midjourney_suffix}".strip()
 
 
 class PromptComposer:
-    """
-    Enterprise-grade AIGC Prompt Composition Engine.
-    Abstracts away the syntax differences between Stable Diffusion (weights, brackets)
-    and Midjourney (parameters, strict aspect ratios).
-    """
+    """从 JSON 模板组合 Stable Diffusion 和 Midjourney 提示词。"""
 
-    def __init__(self, matrix_path: str = "prompts/midjourney_prompt_matrix.json") -> None:
-        self.matrix_path = Path(matrix_path)
-        if not self.matrix_path.exists():
-            raise FileNotFoundError(f"Missing prompt matrix at {self.matrix_path.absolute()}")
-            
+    def __init__(self, matrix_path: str | None = None) -> None:
+        self.matrix_path = (Path(matrix_path) if matrix_path is not None else
+                            Path(__file__).resolve().parents[1] / "prompts/midjourney_prompt_matrix.json")
         self._db = json.loads(self.matrix_path.read_text(encoding="utf-8"))
 
     def list_templates(self) -> list[str]:
@@ -46,7 +41,7 @@ class PromptComposer:
             return f"({token}:{weight:.1f})"
         elif engine.lower() == "midjourney":
             return f"{token}::{weight:.1f}"
-        return token
+        raise ValueError(f"Unknown engine: {engine}")
 
     def compose(
         self, 
@@ -59,25 +54,25 @@ class PromptComposer:
         """
         Constructs a deterministic programmatic prompt tailored to the target model.
         """
+        if target_platform.lower() not in {"sd", "midjourney"}:
+            raise ValueError(f"Unknown platform: {target_platform}")
         templates: dict[str, str] = self._db.get("templates", {})
         if template_name not in templates:
             raise KeyError(f"Unknown template: {template_name}")
             
-        # 1. Base Injection
         base = templates[template_name].format(subject=subject)
         
-        # 2. Append extras
         if extra_positives:
             base = f"{base}, {', '.join(extra_positives)}"
             
-        # 3. Retrieve Universal Negatives
         negative_prompt = self._db.get("sd_defaults", {}).get("negative_prompt", "")
         
-        # 4. Process Midjourney Parameters
+        if target_platform.lower() == "midjourney":
+            negative_prompt = self._db.get("midjourney_negative_prompt", "")
         mj_suffix = ""
         if target_platform.lower() == "midjourney" and mj_param_preset:
             presets = self._db.get("midjourney_params", {})
-            mj_suffix = presets.get(mj_param_preset, "")
+            mj_suffix = presets[mj_param_preset]
 
         return GeneratedPrompt(
             positive=base.strip(", "),
@@ -94,7 +89,6 @@ def build_controlnet_prompt(subject: str, scene: str, style: str) -> str:
     )
 
 if __name__ == "__main__":
-    # Test compilation
     composer = PromptComposer()
     print("--- SDXL Payload ---")
     sd_prompt = composer.compose("cyberpunk_concept", "a futuristic sports car", ["trending on artstation", composer.apply_weight("lens flare", 1.5, "sd")], target_platform="sd")

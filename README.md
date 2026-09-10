@@ -1,90 +1,47 @@
-[English](README.md) | [简体中文](README_zh.md) | [日本語](README_ja.md)
+# AIGC Prompt / ControlNet Lab
 
----
+一个可测试的提示词组合器，以及 Stable Diffusion 1.5 + Canny ControlNet 调用示例。项目关注参数组织、图像预处理和模型调用边界，不宣称生产级 MLOps 或固定显存下的性能保证。
 
-# 🎨 AIGC Prompt Engineering & ControlNet MLOps Lab
+## 提示词组合：无需模型
 
-> **A production-grade bridge between unstructured artistic prompting and deterministic engineering pipelines.**
+Python 3.11，在仓库根目录运行：
 
-Most generative AI repositories fall into two extremes: they are either pure text files of prompts, or heavily tangled Jupiter Notebooks. This repository demonstrates the **"Generative AI Engineering Capability"** by unifying dynamic prompt compilation (Midjourney V6 & SDXL) with a programmatic Stable Diffusion ControlNet pipeline.
-
-## 🏗️ Core Architecture & Capabilities
-
-This lab is split into two complementary engines:
-
-### 1. The Prompt Composition Engine (`src/prompt_engine.py`)
-A deterministic prompt compiler that abstracts away the syntax differences between generative platforms.
-
-*   **Syntax Translation**: Dynamically compiles token weights (`(token:1.5)` for SD vs `token::1.5` for Midjourney).
-*   **Universal Negatives**: Centralized negative prompt injection to ensure baseline quality across all generations.
-*   **Midjourney Parameter Serialization**: Automatically appends V6 aspect ratios, styling, and chaos values (`--ar 16:9 --v 6.0 --s 250`).
-*   **JSON-Backed Matrix**: Decouples prompt design from codebase, allowing non-technical artists to update the `prompts/midjourney_prompt_matrix.json` without breaking the Python orchestration.
-
-### 2. Vibe AIGC Pipeline (`src/sd_diffusers_pipeline.py`)
-A fully-fledged `diffusers` pipeline demonstrating MLOps methodologies tailored for local GPU inference.
-
-*   **VRAM Footprint Optimization**: Implements sequential CPU offloading (`enable_model_cpu_offload()`) and Memory Efficient Attention via `xformers`. Allows 8GB VRAM cards to process complex ControlNet graphs.
-*   **Canny Edge Extraction**: Uses `OpenCV` (cv2) to automatically extract outlines from reference images for structural conditioning.
-*   **High-Fidelity Autoencoders**: Hot-swaps the default VAE with `stabilityai/sd-vae-ft-mse` to prevent visual color shifting during deterministic seed generation.
-
-## 🚀 Quick Start
-
-### 1. Environment Setup
 ```bash
-# Recommended: Create a conda/venv environment first
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install diffusers transformers accelerate xformers opencv-python
+python -m src.prompt_engine
 ```
 
-### 2. Compiling Prompts (Cross-Platform)
-
 ```python
-from prompt_engine import PromptComposer
-import json
+from src.prompt_engine import PromptComposer
 
 composer = PromptComposer()
-
-# Compile for Stable Diffusion (handles token weighting & structural negatives)
-sd_prompt = composer.compose(
-    template_name="cyberpunk_concept", 
-    subject="female android walking", 
-    extra_positives=["trending on artstation", composer.apply_weight("lens flare", 1.5, "sd")], 
-    target_platform="sd"
-)
-print(json.dumps(sd_prompt.as_sd_payload(), indent=2))
-
-# Compile for Midjourney (handles parameter injection)
-mj_prompt = composer.compose(
-    template_name="cinematic_portrait", 
-    subject="an elven ranger", 
-    target_platform="midjourney", 
-    mj_param_preset="v6_photoreal"
-)
-print(mj_prompt.as_midjourney_string()) 
-# Output: /imagine prompt: Cinematic portrait shot of an elven ranger... --v 6.0 --style raw --ar 16:9 --q 2 --s 250
+print(composer.compose("cinematic_portrait", "a small robot").as_sd_payload())
+print(composer.compose("cinematic_portrait", "a small robot",
+    target_platform="midjourney", mj_param_preset="v6_photoreal").as_midjourney_string())
 ```
 
-### 3. Programmatic Image Generation (SD + ControlNet)
+默认模板相对于源码定位，不依赖当前工作目录。可传入自定义 JSON 路径。Midjourney 使用独立的负面提示词，避免把 Stable Diffusion 的括号权重语法混入 `--no`。
 
-```python
-from sd_diffusers_pipeline import VibeAIGCPipeline
+## ControlNet 示例
 
-pipeline = VibeAIGCPipeline(use_xformers=True)
+先按 [PyTorch 安装说明](https://pytorch.org/get-started/locally/) 安装与硬件匹配的 PyTorch，再安装项目依赖：
 
-output_path = pipeline.run_canny_generation(
-    template="cyberpunk_concept",
-    subject="female android walking",
-    reference_image_path="assets/input.jpg",
-    output_path="assets/showcase_out.png",
-    seed=8848
-)
+```bash
+python -m pip install -r requirements.txt
+python -m src.sd_diffusers_pipeline --help
+python -m src.sd_diffusers_pipeline path/to/reference.png --subject "a small robot" --template cinematic_portrait --output output/robot.png --seed 42
 ```
 
-## 🧠 Why This Matters (The Engineering Perspective)
-In enterprise workflows, prompt generation cannot be manual, and image generation cannot rely entirely on a UI (like WebUI/ComfyUI) if you want to deploy it as a microservice.
+`path/to/reference.png` 需要替换为自己的参考图。首次运行下载基础模型、VAE 与 ControlNet 权重；模型使用需遵守各自条款。
 
-1.  **Reproducibility**: By controlling the seed, the generation parameters, and the prompt dynamically via Python classes, we guarantee deterministic tests for the AI output.
-2.  **Modularity**: The prompt matrix JSON behaves like a configuration map. You can deploy updates to prompt art direction without demanding a zero-downtime redeploy of the generative microservices.
-3.  **Hardware Awareness**: The pipeline explicitly checks OS device capabilities (CUDA fallback) and injects RAM/VRAM offloading constraints.
+实现顺序：参考图转 RGB/灰度 → Canny 边缘 → PIL 控制图 → 提示词组合 → 模型推理 → 保存输出。CPU 使用 float32，CUDA 使用 float16 和 model CPU offload。`xformers` 默认关闭，可在 Python 接口中显式启用。
 
-*(This repository demonstrates advanced understanding of multimodal orchestration patterns).*
+基础管线是 **SD 1.5，不是 SDXL**。`apply_weight()` 生成的 SD 字符串采用 A1111 风格，原生 Diffusers 不会自动解释该权重语法，不能据此声称完成了权重嵌入控制。
+
+## 测试
+
+```bash
+python -m pip install pytest
+python -m pytest -q
+```
+
+测试覆盖模板定位、参数错误、平台负面提示词、CPU dtype 和 Canny 控制图传递。模型下载及推理入口在测试中替换为测试对象，因此无需下载权重。这些检查不能证明真实生成效果、显存占用或推理速度；固定 seed 也不保证跨硬件、跨库版本的逐像素一致。
