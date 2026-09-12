@@ -1,5 +1,7 @@
 # AIGC Prompt / ControlNet Lab
 
+**[下载 Windows x64 运行包](https://github.com/kurodayu23/AIGC-Prompt-ControlNet-Lab/releases/latest)**：下载 `AIGCPromptStudio-v1.0.0-Windows-x64.zip`，完整解压后双击 `AIGCPromptStudio.exe`，无需安装 Python。此包提供提示词组合窗口，不包含 ControlNet 生图模型。
+
 一个可测试的提示词组合器，以及 Stable Diffusion 1.5 + Canny ControlNet 调用示例。项目关注参数组织、图像预处理和模型调用边界，不宣称生产级 MLOps 或固定显存下的性能保证。
 
 ## Vibe Coding / AI 辅助开发
@@ -53,3 +55,14 @@ python -m pytest -q
 ```
 
 测试覆盖模板定位、参数错误、平台负面提示词、CPU dtype 和 Canny 控制图传递。模型下载及推理入口在测试中替换为测试对象，因此无需下载权重。这些检查不能证明真实生成效果、显存占用或推理速度；固定 seed 也不保证跨硬件、跨库版本的逐像素一致。
+
+## 构建 Windows 下载包
+
+使用 Python 3.11 x64，建议在独立虚拟环境中运行：
+
+```powershell
+python -m pip install -r scripts/build-requirements.txt
+.\scripts\package_windows.ps1
+```
+
+输出在 `dist/`。脚本会包含运行时和所需资源，生成包含 EXE 与 `_internal` 的 ZIP；发布前需验证解压后的程序。
